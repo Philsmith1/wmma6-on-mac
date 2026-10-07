@@ -1,0 +1,20 @@
+--- a/dlls/oleaut32/olepicture.c
++++ b/dlls/oleaut32/olepicture.c
+@@ -612,6 +612,9 @@
+     OLE_XSIZE_HIMETRIC cxSrc, OLE_YSIZE_HIMETRIC cySrc, HBITMAP hbmMask, HBITMAP hbmXor)
+ {
+     HDC hdcBmp;
++    /* Shrink with COLORONCOLOR: the DC default (BLACKONWHITE) ANDs palette pixels
++     * together, which turns downscaled GIF thumbnails into coloured speckle. */
++    int old_mode = SetStretchBltMode(hdc, COLORONCOLOR);
+ 
+     /* Set a mapping mode that maps bitmap pixels into HIMETRIC units.
+      * NB y-axis gets flipped
+@@ -647,6 +650,7 @@
+     }
+ 
+     DeleteDC(hdcBmp);
++    if (old_mode) SetStretchBltMode(hdc, old_mode);
+ }
+ 
+ /************************************************************************

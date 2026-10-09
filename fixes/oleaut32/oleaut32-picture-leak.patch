@@ -1,0 +1,24 @@
+--- a/dlls/oleaut32/olepicture.c	2026-10-09 19:47:57
++++ b/dlls/oleaut32/olepicture.c	2026-10-09 19:47:57
+@@ -2508,7 +2508,9 @@
+   TRACE("%p, %ld, %d, %s, %p), partially implemented.\n",
+ 	lpstream, lSize, fRunmode, debugstr_guid(riid), ppvObj);
+ 
+-  hr = OleCreatePictureIndirect(NULL,riid,!fRunmode,(LPVOID*)&newpic);
++  /* The picture creates its own bitmap when it loads, so it must own it (as on Windows).
++   * Tying ownership to fRunmode leaked every picture VB6 loads (LoadPicture, form images). */
++  hr = OleCreatePictureIndirect(NULL,riid,TRUE,(LPVOID*)&newpic);
+   if (hr != S_OK)
+     return hr;
+   hr = IPicture_QueryInterface(newpic,&IID_IPersistStream, (LPVOID*)&ps);
+@@ -2549,7 +2551,9 @@
+ 	lpstream, lSize, fRunmode, debugstr_guid(riid), xsiz, ysiz, flags, ppvObj);
+   /* hack to prevent this patch from applying in the wrong place */
+ 
+-  hr = OleCreatePictureIndirect(NULL,riid,!fRunmode,(LPVOID*)&newpic);
++  /* The picture creates its own bitmap when it loads, so it must own it (as on Windows).
++   * Tying ownership to fRunmode leaked every picture VB6 loads (LoadPicture, form images). */
++  hr = OleCreatePictureIndirect(NULL,riid,TRUE,(LPVOID*)&newpic);
+   if (hr != S_OK)
+     return hr;
+   if (xsiz == LP_DEFAULT && ysiz == LP_DEFAULT)

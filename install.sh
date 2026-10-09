@@ -60,7 +60,7 @@ if [ ! -d "$WINEAPP" ]; then
     xattr -dr com.apple.quarantine "$WINEAPP" 2>/dev/null
 fi
 
-step "2/8  Installing the two Wine fixes (Rosetta mode switch, thumbnail quality)"
+step "2/8  Installing the Wine fixes (Rosetta mode switch; oleaut32 thumbnails and picture leak)"
 (cd "$REPO/fixes/wow64cpu" && shasum -a 256 -c -s SHA256SUMS) || die "fixes/wow64cpu/wow64cpu.dll checksum mismatch"
 (cd "$REPO/fixes/oleaut32" && shasum -a 256 -c -s SHA256SUMS) || die "fixes/oleaut32/oleaut32.dll checksum mismatch"
 LIB="$WINEAPP/Contents/Resources/wine/lib/wine"
@@ -106,7 +106,7 @@ printf 'mdac27\njet40\n' >> "$WINEPREFIX/winetricks.log"   # stop winetricks rei
 
 step "6/8  Installing fonts, VB6 runtime and .NET Framework 4.8 (about 15 minutes)"
 run winetricks -q -f corefonts tahoma vb6run dotnet48
-# Use Wine's oleaut32 (with the thumbnail fix). vb6run's native oleaut32 makes WMMA6 stop
+# Use Wine's oleaut32 (with the thumbnail and picture-leak fixes). vb6run's native oleaut32 makes WMMA6 stop
 # with "Run-time error '50003': Unexpected error".
 run wine reg add 'HKCU\Software\Wine\DllOverrides' /v '*oleaut32' /d builtin /f
 run wineserver -w

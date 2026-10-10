@@ -37,7 +37,7 @@ The launcher keeps your display awake while you play. If the display sleeps, the
 
 ## Updating
 
-If you installed before 9 October 2026, update to get the fix for crashes during long sims (see **Troubleshooting**). Quit the game, then in the `wmma6-on-mac` folder run:
+If you installed before 9 October 2026, update to get the fix for crashes during long sims (see **Troubleshooting**). Updating after 10 October also fixes white or black boxes around fighter photos. Quit the game, then in the `wmma6-on-mac` folder run:
 
 ```sh
 git pull
@@ -80,6 +80,7 @@ The licence can be active on one computer at a time. **Deactivate it first** wit
 | The game never opens; the log shows `nested exception on signal stack` | The Rosetta fix isn't in place. Don't replace or update `~/WMMA6-Mac/Wine Staging.app`. Rerun `install.sh`. |
 | `Run-time error '50003': Unexpected error` at startup | The native oleaut32 override is active. Run `source ~/WMMA6-Mac/wmma6-env.sh && wine reg add 'HKCU\Software\Wine\DllOverrides' /v '*oleaut32' /d builtin /f` |
 | `Run-time error '5'` at startup | The game was started from the wrong folder. Use the WMMA6 app. |
+| White or black boxes around fighter faces, bodies or belts | Installs from before 10 October 2026 lose GIF transparency. Run `./update.sh` (see **Updating**). |
 | The game crashes during long sims or loading screens, often with `Error 3035: System resource exceeded` | Installs from before 9 October 2026 slowly run out of memory. Run `./update.sh` (see **Updating**). If it still happens after updating, please open an issue. |
 | Install failed | Read `~/WMMA6-Mac/install.log`. Rerunning `install.sh` is safe. |
 
@@ -96,7 +97,7 @@ rm -rf ~/WMMA6-Mac ~/Applications/WMMA6.app
 
 ## How it works
 
-WMMA6 is a 32-bit Visual Basic 6 program. It keeps its data in Access databases (DAO 3.6 / Jet 4.0) and checks your licence with QLM, which loads 32-bit .NET Framework into the game process. Wine on macOS runs 32-bit Windows code inside 64-bit processes ("WoW64") on Rosetta 2. Four problems needed solving.
+WMMA6 is a 32-bit Visual Basic 6 program. It keeps its data in Access databases (DAO 3.6 / Jet 4.0) and checks your licence with QLM, which loads 32-bit .NET Framework into the game process. Wine on macOS runs 32-bit Windows code inside 64-bit processes ("WoW64") on Rosetta 2. Five problems needed solving.
 
 **1. The licence check hangs (Rosetta fix).** Every 32-bit .NET program hangs under Wine on Apple Silicon with `nested exception on signal stack`. Wine's `wow64cpu.dll` switches the CPU between 32-bit and 64-bit mode with far *jumps*, and Rosetta 2 sometimes doesn't switch modes on one. The fix uses far *returns* instead. It comes from [kic99/TEW_IX_on_Mac](https://github.com/kic99/TEW_IX_on_Mac), and Sikarugir uses a similar workaround. → `fixes/wow64cpu/`
 
@@ -105,6 +106,8 @@ WMMA6 is a 32-bit Visual Basic 6 program. It keeps its data in Access databases 
 **3. Speckled thumbnails with Wine's oleaut32.** When Wine's `IPicture::Render` shrinks an image, it uses the device context's default stretch mode, `BLACKONWHITE`. On paletted GIFs that ANDs neighbouring pixels together, so small fighter photos turn into coloured speckle. The fix sets `COLORONCOLOR` for the draw and then restores the previous mode. → `fixes/oleaut32/`
 
 **4. Crashes in long sims (memory leak in Wine's oleaut32).** Wine's `OleLoadPicture` only gives a picture ownership of its bitmap when `fRunmode` is FALSE. VB6 passes TRUE, so the bitmap stays behind when the picture is freed. On Windows a loaded picture always owns its bitmap. WMMA6 loads a full-screen background (about 2 MB) every time a fight is processed. After about three hours of simming, its 2 GB of 32-bit address space was full and the next allocation failed: `Error 3035: System resource exceeded`, often in `wAdvanceFight`. The fix makes loaded pictures own their bitmaps. `fixes/oleaut32/leaktest.c` loads and frees a fight background 300 times: 589 MB leaked without the fix, 0 MB with it. → `fixes/oleaut32/`
+
+**5. White and black boxes around fighter photos (Wine's oleaut32).** WMMA6's face, body and belt GIFs are 256-colour images with one colour marked transparent. Since April 2025, Wine has kept such images in 256 colours, but it only builds a transparency mask for 32-bit images. So the transparency was lost: faces got white boxes over backdrops, and bodies and belts got black boxes. The fix converts 256-colour images that have a transparent colour to 32-bit again, as Wine did before. [kic99](https://github.com/kic99/TEW_IX_on_Mac) spotted this in TEW IX. → `fixes/oleaut32/`
 
 Other details:
 - **MDAC 2.7** is unpacked with `cabextract` and set up directly, because its self-extractor fails under WoW64.

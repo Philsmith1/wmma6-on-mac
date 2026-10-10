@@ -60,7 +60,7 @@ if [ ! -d "$WINEAPP" ]; then
     xattr -dr com.apple.quarantine "$WINEAPP" 2>/dev/null
 fi
 
-step "2/8  Installing the Wine fixes (Rosetta mode switch; oleaut32 thumbnails and picture leak)"
+step "2/8  Installing the Wine fixes (Rosetta mode switch; oleaut32 pictures)"
 (cd "$REPO/fixes/wow64cpu" && shasum -a 256 -c -s SHA256SUMS) || die "fixes/wow64cpu/wow64cpu.dll checksum mismatch"
 (cd "$REPO/fixes/oleaut32" && shasum -a 256 -c -s SHA256SUMS) || die "fixes/oleaut32/oleaut32.dll checksum mismatch"
 LIB="$WINEAPP/Contents/Resources/wine/lib/wine"

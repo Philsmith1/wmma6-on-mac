@@ -1,0 +1,44 @@
+--- a/dlls/oleaut32/olepicture.c
++++ b/dlls/oleaut32/olepicture.c
+@@ -1007,6 +1007,24 @@
+ }
+ 
+ HRESULT WINAPI WICCreateImagingFactory_Proxy(UINT, IWICImagingFactory**);
++
++static BOOL has_transparent_entry(IWICImagingFactory *factory, IWICBitmapSource *src)
++{
++    WICColor colors[256];
++    IWICPalette *palette;
++    UINT count = 0, i;
++    BOOL ret = FALSE;
++
++    if (FAILED(IWICImagingFactory_CreatePalette(factory, &palette))) return FALSE;
++    if (SUCCEEDED(IWICBitmapSource_CopyPalette(src, palette)) &&
++        SUCCEEDED(IWICPalette_GetColors(palette, ARRAY_SIZE(colors), colors, &count)))
++    {
++        for (i = 0; i < count; i++)
++            if ((colors[i] >> 24) != 0xff) { ret = TRUE; break; }
++    }
++    IWICPalette_Release(palette);
++    return ret;
++}
+ 
+ static HRESULT OLEPictureImpl_LoadWICSource(OLEPictureImpl *This, IWICImagingFactory *factory, IWICBitmapSource *src)
+ {
+@@ -1037,10 +1055,16 @@
+         }
+     }
+ 
++    /* Paletted images with a transparent entry (e.g. GIFs) need a mask, which is only
++     * built for 32bpp BGRA, so convert those as before rather than keeping them paletted. */
++    if (i < ARRAY_SIZE(wicformats) && indexed && has_transparent_entry(factory, src))
++        i = ARRAY_SIZE(wicformats);
++
+     if (i == ARRAY_SIZE(wicformats))
+     {
+         memcpy(&guid, &GUID_WICPixelFormat32bppBGRA, sizeof(guid));
+         bih.biBitCount = 32;
++        indexed = FALSE;
+     }
+ 
+     hr = WICConvertBitmapSource(&guid, src, &real_source);
